@@ -2,7 +2,7 @@ from aiogram import Bot, Dispatcher
 from aiogram import types
 from aiogram.utils import executor
 from aiogram.types import ParseMode
-# from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.contrib.fsm_storage.memory import MemoryStorage
 
 import config
@@ -36,11 +36,11 @@ class _Bot:
         query: Query = query_factory.get_query(query_name)
         query_members: str = QueryUtils.get_stylish_members(query.get_all_members())
         await message.answer(f'Очередь "{query_name}"\n\n{query_members}')
-
+    
     @staticmethod
     async def add_member(message, query_name):
         query = query_factory.get_query(query_name)
-        query.add_member(query.get_count_members() + 1, message.from_user.username)
+        query.add_member(query_position=-1, telegram_username=message.from_user.username)
         await message.answer(f'Вы добавлены в очередь "{query_name}"')  
 
     @staticmethod

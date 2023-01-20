@@ -19,19 +19,23 @@ class Query:
     def __init__(self, _redis: redis.StrictRedis, name: str) -> None:
         self._redis = _redis
         self.name = name
+        
+        self._redis.set('query_length', 1)
 
-    def get_count_members(self) -> int:
-        return self._redis.zcard(self.name)
-
-    def add_member(self, query_position: int, telegram_username: str) -> None:
+    def add_member(self, query_position: int | None, telegram_username: str) -> None:
+        if query_position == -1:
+            query_position = self._redis.get('query_length')
         self._redis.zadd(self.name,
-                {
-                    telegram_username: query_position
-                }
+            {
+                telegram_username: query_position
+            }
         )
+
+        self._redis.incr('query_length')
 
     def clear_query(self):
         self._redis.delete(self.name)
+        self._redis.delete('query_length')
 
     def get_all_members(self) -> list:
         return self._redis.zrange(self.name, 0, -1, withscores=True)
@@ -40,7 +44,8 @@ class Query:
 class QueryUtils:
     @staticmethod
     def get_stylish_members(members: list[tuple]) -> str:
-        return '\n'.join([f"{int(count)}. @{member}" for member, count in members])
+        result = '\n'.join([f"{int(count)}. @{member}" for member, count in members])
+        return result
 
 
 class QueryFactory:
