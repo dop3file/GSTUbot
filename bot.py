@@ -8,6 +8,8 @@ from aiogram.contrib.fsm_storage.memory import MemoryStorage
 from aiogram.dispatcher.filters.state import State, StatesGroup
 
 import config
+
+from query import QueryNameException
 from main import query_factory
 
 
@@ -23,10 +25,13 @@ class _Bot:
             'create': _Bot.create_query,
         }
 
-        if ' ' in message.text:
+        if list(message.text).count(' ') >= 2:
             command = message.text.split(' ')[1]
             query_name = message.text.split(' ')[2]
-            await commands.get(command)(message, query_name)
+            try:
+                await commands.get(command)(message, query_name)
+            except QueryNameException:
+                await message.answer("Ошибка имени, возможно такой очереди не существует")
 
     async def get_members(message, query_name):
         query_members: list = query_factory.get_query(query_name).get_all_members()

@@ -42,14 +42,26 @@ class QueryFactory:
         self.querys = {}
 
     def add_query(self, query_name: str) -> None:
+        if query_name in self.querys:
+            self.querys[query_name].clear_query()
         self.querys[query_name] = Query(_Redis(), query_name)
 
     def get_query(self, query_name: str) -> Query:
-        return self.querys[query_name]
+        try:
+            return self.querys[query_name]
+        except KeyError:
+            raise QueryNameException
 
     def delete_query(self, query_name: str) -> None:
-        self.querys[query_name].clear_query()
-        del self.querys[query_name]
+        try:
+            self.querys[query_name].clear_query()
+            del self.querys[query_name]
+        except KeyError:
+            raise QueryNameException
+
+
+class QueryNameException(Exception):
+    pass
         
     
 
