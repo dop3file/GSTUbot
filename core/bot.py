@@ -2,14 +2,11 @@ from aiogram import Bot, Dispatcher
 from aiogram import types
 from aiogram.utils import executor
 from aiogram.types import ParseMode
-from aiogram.types import ReplyKeyboardRemove,ReplyKeyboardMarkup, KeyboardButton, \
-                          InlineKeyboardMarkup, InlineKeyboardButton
+# from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.contrib.fsm_storage.memory import MemoryStorage
-from aiogram.dispatcher.filters.state import State, StatesGroup
 
 import config
-
-from query import QueryNameException
+from query import QueryNameException, Query, QueryUtils
 from main import query_factory
 
 
@@ -18,6 +15,7 @@ class _Bot:
     dp = Dispatcher(bot, storage=MemoryStorage())
 
     @dp.message_handler(commands=['query'], state='*')
+    @staticmethod
     async def query_router(message: types.Message):
         commands = {
             'get': _Bot.get_members,
@@ -33,18 +31,21 @@ class _Bot:
             except QueryNameException:
                 await message.answer("Ошибка имени, возможно такой очереди не существует")
 
+    @staticmethod
     async def get_members(message, query_name):
-        query_members: list = query_factory.get_query(query_name).get_all_members()
-        query_members_str = '\n'.join([f"{int(count)}. @{member}" for member, count in query_members])
-        await message.answer(f'Очередь "{query_name}"\n\n{query_members_str}')
+        query: Query = query_factory.get_query(query_name)
+        query_members: str = QueryUtils.get_stylish_members(query.get_all_members())
+        await message.answer(f'Очередь "{query_name}"\n\n{query_members}')
 
+    @staticmethod
     async def add_member(message, query_name):
         query = query_factory.get_query(query_name)
         query.add_member(query.get_count_members() + 1, message.from_user.username)
         await message.answer(f'Вы добавлены в очередь "{query_name}"')  
 
+    @staticmethod
     async def create_query(message, query_name):
-        query = query_factory.add_query(query_name)
+        query_factory.add_query(query_name)
         await message.answer(f'Очередь "{query_name}" создана')
 
 

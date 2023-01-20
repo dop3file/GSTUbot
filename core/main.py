@@ -1,5 +1,4 @@
 from query import Query
-import config
 
 from query import QueryFactory
 

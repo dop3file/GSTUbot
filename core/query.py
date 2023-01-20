@@ -16,48 +16,54 @@ class _Redis(redis.StrictRedis):
 
 
 class Query:
-    def __init__(self, redis: redis.StrictRedis, query_name: str) -> None:
-        self.r = redis
-        self.name = query_name
+    def __init__(self, _redis: redis.StrictRedis, name: str) -> None:
+        self._redis = _redis
+        self.name = name
 
     def get_count_members(self) -> int:
-        return self.r.zcard(self.name)
+        return self._redis.zcard(self.name)
 
     def add_member(self, query_position: int, telegram_username: str) -> None:
-            self.r.zadd(self.name,
-                    {
-                        telegram_username: query_position
-                    }
-            )
+        self._redis.zadd(self.name,
+                {
+                    telegram_username: query_position
+                }
+        )
 
     def clear_query(self):
-        self.r.delete(self.name)
+        self._redis.delete(self.name)
 
     def get_all_members(self) -> list:
-        return self.r.zrange(self.name, 0, -1, withscores=True)
+        return self._redis.zrange(self.name, 0, -1, withscores=True)
+
+
+class QueryUtils:
+    @staticmethod
+    def get_stylish_members(members: list[tuple]) -> str:
+        return '\n'.join([f"{int(count)}. @{member}" for member, count in members])
 
 
 class QueryFactory:
     def __init__(self):
-        self.querys = {}
+        self.queues = {}
 
     def add_query(self, query_name: str) -> None:
-        if query_name in self.querys:
-            self.querys[query_name].clear_query()
-        self.querys[query_name] = Query(_Redis(), query_name)
+        if query_name in self.queues:
+            self.queues[query_name].clear_query()
+        self.queues[query_name] = Query(_Redis(), query_name)
 
     def get_query(self, query_name: str) -> Query:
         try:
-            return self.querys[query_name]
-        except KeyError:
-            raise QueryNameException
+            return self.queues[query_name]
+        except KeyError as exc:
+            raise QueryNameException from exc
 
     def delete_query(self, query_name: str) -> None:
         try:
-            self.querys[query_name].clear_query()
-            del self.querys[query_name]
-        except KeyError:
-            raise QueryNameException
+            self.queues[query_name].clear_query()
+            del self.queues[query_name]
+        except KeyError as exc:
+            raise QueryNameException from exc
 
 
 class QueryNameException(Exception):
