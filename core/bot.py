@@ -7,49 +7,46 @@ from aiogram.contrib.fsm_storage.memory import MemoryStorage
 
 import config
 from query import QueryNameException, Query, QueryUtils
-from main import query_factory
 
 
 class _Bot:
-    bot = Bot(config.BOT_TOKEN, parse_mode=ParseMode.HTML)
-    dp = Dispatcher(bot, storage=MemoryStorage())
+    def __init__(self, query_factory):
+        self.query_factory = query_factory
+        self.bot = Bot(config.BOT_TOKEN, parse_mode=ParseMode.HTML)
+        self.dp = Dispatcher(self.bot, storage=MemoryStorage())
 
-    @dp.message_handler(commands=['query'], state='*')
-    @staticmethod
-    async def query_router(message: types.Message):
+        self.dp.register_message_handler(self.query_router, commands=['query'])
+        executor.start_polling(dispatcher=self.dp, skip_updates=True)
+
+    async def query_router(self, message: types.Message):
         commands = {
-            'get': _Bot.get_members,
-            'add': _Bot.add_member,
-            'create': _Bot.create_query,
+            'get': self.get_members,
+            'add': self.add_member,
+            'create': self.create_query,
         }
 
-        if list(message.text).count(' ') >= 2:
-            command = message.text.split(' ')[1]
-            query_name = message.text.split(' ')[2]
+        arguments = message.get_args().split(' ')
+
+        if len(arguments) >= 2:
+            command = arguments[0]
+            query_name = arguments[1]
+
             try:
                 await commands.get(command)(message, query_name)
             except QueryNameException:
                 await message.answer("Ошибка имени, возможно такой очереди не существует")
 
-    @staticmethod
-    async def get_members(message, query_name):
-        query: Query = query_factory.get_query(query_name)
+    async def get_members(self, message: types.Message, query_name: str) -> None:
+        query: Query = self.query_factory.get_query(query_name)
         query_members: str = QueryUtils.get_stylish_members(query.get_all_members())
         await message.answer(f'Очередь "{query_name}"\n\n{query_members}')
     
-    @staticmethod
-    async def add_member(message, query_name):
-        query = query_factory.get_query(query_name)
+    async def add_member(self, message: types.Message, query_name: str) -> None:
+        query = self.query_factory.get_query(query_name)
         query.add_member(query_position=-1, telegram_username=message.from_user.username)
         await message.answer(f'Вы добавлены в очередь "{query_name}"')  
 
-    @staticmethod
-    async def create_query(message, query_name):
-        query_factory.add_query(query_name)
+    async def create_query(self, message: types.Message, query_name: str) -> None:
+        self.query_factory.add_query(query_name)
         await message.answer(f'Очередь "{query_name}" создана')
 
-
-
-bot = _Bot()
-
-executor.start_polling(dispatcher=bot.dp, skip_updates=True)

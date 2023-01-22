@@ -1,6 +1,9 @@
 from query import QueryFactory
+from bot import _Bot
 
 
 query_factory = QueryFactory()
-import bot
+bot = _Bot(query_factory)
+
+
 
